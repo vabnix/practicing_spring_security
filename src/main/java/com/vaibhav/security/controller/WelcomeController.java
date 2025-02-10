@@ -12,6 +12,8 @@ public class WelcomeController {
     @GetMapping("/")
     public String welcomePage(HttpServletRequest request){
         log.info("User: [" + request.getRemoteUser() + "] has logged in with session id : "+ request.getSession().getId());
-        return "Hello there !";
+        return "Hello [" + request.getRemoteUser() + "] has logged in with session id : "+ request.getSession().getId();
     }
+
+
 }
