@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.provisioning.JdbcUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
@@ -41,18 +42,18 @@ public class SecurityConfig {
     @Bean
     UserDetailsService userDetailsService(){
         UserDetails user1 = User.withUsername("user1")
-                .password("{noop}password")
+                .password(passwordEncoder().encode("password"))
                 .roles("USER")
                 .build();
 
         UserDetails admin = User.withUsername("admin")
-                .password("{noop}password")
+                .password(passwordEncoder().encode("password"))
                 .roles("ADMIN")
                 .build();
 
         JdbcUserDetailsManager jdbcUserDetailsManager = new JdbcUserDetailsManager(dataSource);
-        createUserIfNotExists(jdbcUserDetailsManager, "user1", "password", "USER");
-        createUserIfNotExists(jdbcUserDetailsManager, "admin", "password", "ADMIN");
+        createUserIfNotExists(jdbcUserDetailsManager, "user1", user1.getPassword(), "USER");
+        createUserIfNotExists(jdbcUserDetailsManager, "admin", admin.getPassword(), "ADMIN");
 
         return jdbcUserDetailsManager;
     }
@@ -61,10 +62,15 @@ public class SecurityConfig {
                                        String password, String role) {
         if (!manager.userExists(username)) {
             UserDetails user = User.withUsername(username)
-                    .password("{noop}" + password)
+                    .password(password)
                     .roles(role)
                     .build();
             manager.createUser(user);
         }
+    }
+
+    @Bean
+    BCryptPasswordEncoder passwordEncoder(){
+        return new BCryptPasswordEncoder();
     }
 }
