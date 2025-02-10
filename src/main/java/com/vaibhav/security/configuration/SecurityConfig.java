@@ -1,5 +1,6 @@
 package com.vaibhav.security.configuration;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -10,13 +11,20 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.provisioning.JdbcUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+
+import javax.sql.DataSource;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
+
+    @Autowired
+    DataSource dataSource;
 
     @Bean
     SecurityFilterChain customSecurityFilterChain(HttpSecurity httpSecurity) throws Exception {
@@ -34,15 +42,35 @@ public class SecurityConfig {
     @Bean
     UserDetailsService userDetailsService(){
         UserDetails user1 = User.withUsername("user1")
-                .password("{noop}password")
+                .password(passwordEncoder().encode("password"))
                 .roles("USER")
                 .build();
 
         UserDetails admin = User.withUsername("admin")
-                .password("{noop}password")
+                .password(passwordEncoder().encode("password"))
                 .roles("ADMIN")
                 .build();
 
-        return new InMemoryUserDetailsManager(user1, admin);
+        JdbcUserDetailsManager jdbcUserDetailsManager = new JdbcUserDetailsManager(dataSource);
+        createUserIfNotExists(jdbcUserDetailsManager, "user1", user1.getPassword(), "USER");
+        createUserIfNotExists(jdbcUserDetailsManager, "admin", admin.getPassword(), "ADMIN");
+
+        return jdbcUserDetailsManager;
+    }
+
+    private void createUserIfNotExists(JdbcUserDetailsManager manager, String username,
+                                       String password, String role) {
+        if (!manager.userExists(username)) {
+            UserDetails user = User.withUsername(username)
+                    .password(password)
+                    .roles(role)
+                    .build();
+            manager.createUser(user);
+        }
+    }
+
+    @Bean
+    BCryptPasswordEncoder passwordEncoder(){
+        return new BCryptPasswordEncoder();
     }
 }
